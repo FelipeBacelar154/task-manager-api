@@ -3,6 +3,7 @@ let token = localStorage.getItem('token');
 let userName = localStorage.getItem('userName');
 let allTasks = [];
 let currentFilter = 'all';
+let searchQuery = '';
 
 if (token) showTasks();
 
@@ -24,15 +25,15 @@ async function register() {
     body: JSON.stringify({ name, email, password })
   });
 
-  const data = await res.json();
+  const json = await res.json();
   const el = document.getElementById('register-error');
 
-  if (res.ok) {
+  if (json.success) {
     el.style.color = '#22c55e';
     el.textContent = 'Account created! Please login.';
   } else {
     el.style.color = '#f87171';
-    el.textContent = data.error;
+    el.textContent = json.error;
   }
 }
 
@@ -46,16 +47,16 @@ async function login() {
     body: JSON.stringify({ email, password })
   });
 
-  const data = await res.json();
+  const json = await res.json();
 
-  if (res.ok) {
-    token = data.token;
+  if (json.success) {
+    token = json.data.token;
+    userName = json.data.name;
     localStorage.setItem('token', token);
-    localStorage.setItem('userName', email.split('@')[0]);
-    userName = email.split('@')[0];
+    localStorage.setItem('userName', userName);
     showTasks();
   } else {
-    document.getElementById('login-error').textContent = data.error;
+    document.getElementById('login-error').textContent = json.error;
   }
 }
 
@@ -80,13 +81,23 @@ function showTasks() {
 }
 
 async function loadTasks() {
-  const res = await fetch(`${API}/tasks`, {
+  const url = searchQuery
+    ? `${API}/tasks?search=${encodeURIComponent(searchQuery)}`
+    : `${API}/tasks`;
+
+  const res = await fetch(url, {
     headers: { 'Authorization': `Bearer ${token}` }
   });
 
-  allTasks = await res.json();
+  const json = await res.json();
+  allTasks = json.success ? json.data : [];
   updateStats();
   renderTasks();
+}
+
+function handleSearch(e) {
+  searchQuery = e.target.value.trim();
+  loadTasks();
 }
 
 function isOverdue(due_date) {
@@ -181,7 +192,6 @@ function taskCard(task) {
 
   const badgeClass = overdue ? 'badge-overdue' : isDone ? 'badge-done' : 'badge-pending';
   const badgeText = overdue ? 'Overdue' : isDone ? 'Done' : 'Pending';
-
   const codeBadge = task.file_path ? `<span class="badge badge-code">⌨ Code</span>` : '';
 
   return `
@@ -258,7 +268,7 @@ async function createTask() {
 
   if (!title) return;
 
-  await fetch(`${API}/tasks`, {
+  const res = await fetch(`${API}/tasks`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
@@ -266,6 +276,13 @@ async function createTask() {
     },
     body: JSON.stringify({ title, description, due_date, file_path })
   });
+
+  const json = await res.json();
+
+  if (!json.success) {
+    alert(json.error);
+    return;
+  }
 
   document.getElementById('task-title').value = '';
   document.getElementById('task-description').value = '';

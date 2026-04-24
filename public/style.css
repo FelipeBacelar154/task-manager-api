@@ -519,3 +519,18 @@ button:hover { background: #4f46e5; }
   background: #1e4a7f;
   color: #93c5fd;
 }
+
+
+.topbar-center {
+  flex: 1;
+  max-width: 300px;
+  margin: 0 24px;
+}
+
+.topbar-center input {
+  margin-bottom: 0;
+  background: #0f0f1a;
+  border-color: #2a2a3e;
+  padding: 8px 14px;
+  font-size: 13px;
+}

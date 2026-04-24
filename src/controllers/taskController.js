@@ -1,53 +1,70 @@
-const db = require('../config/database');
+const taskService = require('../services/taskService');
 
-function getTasks(req, res) {
-  db.all('SELECT * FROM tasks WHERE user_id = ? ORDER BY due_date ASC, created_at DESC', [req.userId], (err, tasks) => {
-    if (err) return res.status(500).json({ error: 'Erro ao buscar tarefas' });
-    return res.json(tasks);
-  });
+function success(res, data, statusCode = 200) {
+  return res.status(statusCode).json({ success: true, data });
 }
 
-function createTask(req, res) {
+function error(res, message, statusCode = 400) {
+  return res.status(statusCode).json({ success: false, error: message });
+}
+
+async function getTasks(req, res) {
+  const search = req.query.search || '';
+  try {
+    const tasks = await taskService.getAllTasks(req.userId, search);
+    return success(res, tasks);
+  } catch (err) {
+    return error(res, err.message, 500);
+  }
+}
+
+async function createTask(req, res) {
   const { title, description, due_date, file_path } = req.body;
-  if (!title) return res.status(400).json({ error: 'Título obrigatório' });
 
-  db.run(
-    'INSERT INTO tasks (title, description, due_date, file_path, user_id) VALUES (?, ?, ?, ?, ?)',
-    [title, description, due_date, file_path, req.userId],
-    function (err) {
-      if (err) return res.status(500).json({ error: 'Erro ao criar tarefa' });
-      return res.status(201).json({ message: 'Tarefa criada!', id: this.lastID });
-    }
-  );
+  if (!title || title.trim().length === 0)
+    return error(res, 'Title is required');
+
+  if (title.trim().length < 3)
+    return error(res, 'Title must be at least 3 characters');
+
+  try {
+    const result = await taskService.createTask(req.userId, { title, description, due_date, file_path });
+    return success(res, { message: 'Task created!', id: result.id }, 201);
+  } catch (err) {
+    return error(res, err.message, 500);
+  }
 }
 
-function updateTask(req, res) {
+async function updateTask(req, res) {
   const { title, description, status, due_date, file_path } = req.body;
   const { id } = req.params;
 
-  db.run(
-    'UPDATE tasks SET title = ?, description = ?, status = ?, due_date = ?, file_path = ? WHERE id = ? AND user_id = ?',
-    [title, description, status, due_date, file_path, id, req.userId],
-    function (err) {
-      if (err) return res.status(500).json({ error: 'Erro ao atualizar tarefa' });
-      if (this.changes === 0) return res.status(404).json({ error: 'Tarefa não encontrada' });
-      return res.json({ message: 'Tarefa atualizada!' });
-    }
-  );
+  if (!title || title.trim().length === 0)
+    return error(res, 'Title is required');
+
+  const validStatuses = ['pending', 'done'];
+  if (status && !validStatuses.includes(status))
+    return error(res, 'Invalid status');
+
+  try {
+    await taskService.updateTask(req.userId, id, { title, description, status, due_date, file_path });
+    return success(res, { message: 'Task updated!' });
+  } catch (err) {
+    const statusCode = err.message === 'Task not found' ? 404 : 500;
+    return error(res, err.message, statusCode);
+  }
 }
 
-function deleteTask(req, res) {
+async function deleteTask(req, res) {
   const { id } = req.params;
 
-  db.run(
-    'DELETE FROM tasks WHERE id = ? AND user_id = ?',
-    [id, req.userId],
-    function (err) {
-      if (err) return res.status(500).json({ error: 'Erro ao deletar tarefa' });
-      if (this.changes === 0) return res.status(404).json({ error: 'Tarefa não encontrada' });
-      return res.json({ message: 'Tarefa deletada!' });
-    }
-  );
+  try {
+    await taskService.deleteTask(req.userId, id);
+    return success(res, { message: 'Task deleted!' });
+  } catch (err) {
+    const statusCode = err.message === 'Task not found' ? 404 : 500;
+    return error(res, err.message, statusCode);
+  }
 }
 
 module.exports = { getTasks, createTask, updateTask, deleteTask };
