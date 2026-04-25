@@ -12,6 +12,7 @@ A full-stack task management application with user authentication, built with No
 - Code task integration — open files directly in VS Code
 - Stats dashboard (Total, Pending, Done, Overdue)
 - Each user can only access their own tasks
+- Docker support
 
 ## 🛠 Technologies
 
@@ -26,6 +27,10 @@ A full-stack task management application with user authentication, built with No
 - HTML5
 - CSS3
 - Vanilla JavaScript
+
+**DevOps**
+- Docker
+- Docker Compose
 
 ## 📁 Project Structure
 
@@ -48,6 +53,8 @@ A full-stack task management application with user authentication, built with No
     │   └── services/
     │       ├── userService.js
     │       └── taskService.js
+    ├── Dockerfile
+    ├── docker-compose.yml
     ├── server.js
     └── package.json
 
@@ -55,6 +62,7 @@ A full-stack task management application with user authentication, built with No
 
 ### Prerequisites
 - Node.js installed
+- Docker installed (optional)
 
 ### Installation
 
@@ -69,9 +77,14 @@ Create a `.env` file in the root directory:
     PORT=3000
     JWT_SECRET=your_secret_key
 
-### Running the server
+### Running locally
 
     npm run dev
+
+### Running with Docker
+
+    docker build -t task-manager-api .
+    docker run -p 3000:3000 -e JWT_SECRET=your_secret_key task-manager-api
 
 Open `http://localhost:3000` in your browser.
 
